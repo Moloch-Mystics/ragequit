@@ -4,6 +4,6 @@
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "lib/account"]
-	path = lib/account
-	url = https://github.com/NaniDAO/account
+[submodule "lib/accounts"]
+	path = lib/accounts
+	url = https://github.com/NaniDAO/accounts

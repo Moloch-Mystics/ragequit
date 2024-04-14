@@ -14,7 +14,7 @@ line_length = 100
 remappings = [
   "@solady=lib/solady/",
   "@forge=lib/forge-std/src/",
-  "@nani=lib/account/src/"
+  "@nani=lib/accounts/src/"
 ]
 
 [rpc_endpoints]
