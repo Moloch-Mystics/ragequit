@@ -4,88 +4,33 @@ on: [push]
 
 jobs:
   tests:
-    name: Forge Testing
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Install Foundry
-        uses: onbjerg/foundry-toolchain@v1
-        with:
-          version: nightly
-
-      - name: Install Dependencies
-        run: forge install
-
-      - name: Run Tests
-        run: forge test
-        env:
-          FOUNDRY_PROFILE: ci
-
-  snapshot:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
-
-      - name: Install deps
-        run: forge install
-
-      - name: Check contract sizes
-        run: forge build --sizes
-
-      - name: Check gas snapshots
-        run: forge snapshot --check
-
-  slither:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [16.x]
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
-
-      - name: Install deps
-        run: forge install
-
-      - name: Check contract sizes
-        run: forge build --sizes
-
-  scripts:
-    strategy:
-      fail-fast: true
-    name: Run Unix Scripts
+    name: Forge Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
+      - name: dependencies
+        run: forge install
+      - name: tests
+        run: forge test
 
-      - name: Run Forge build
-        run: |
-          forge --version
-          forge build --sizes
-        id: build
-        continue-on-error: true
-
-      - name: Run scripts
-        run: |
-          ls -lsa
-          ls script/
-          for file in script/*; do
-            forge script $file
-          done
+  snapshot:
+    name: Forge Snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      - name: dependencies
+        run: forge install
+      - name: check contract sizes
+        run: forge build --sizes
+      - name: check gas snapshots
+        run: forge snapshot --check

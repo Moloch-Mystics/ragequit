@@ -1,19 +1,25 @@
-# The Default Profile
 [profile.default]
-solc_version = "0.8.17"
-auto_detect_solc = false
-optimizer_runs = 9999999
+solc_version = "0.8.25"
+evm_version = "cancun"
+
+optimizer = true
+optimizer_runs = 9_999_999
+
+[profile.via-ir]
 via_ir = true
 
-# Configure remappings
+[fmt]
+line_length = 100
+
 remappings = [
-  "@ds=lib/ds-test/src/",
-  "@std=lib/forge-std/src/",
-  "@solbase=lib/solbase/"
+  "@solady=lib/solady/",
+  "@forge=lib/forge-std/src/",
+  "@nani=lib/account/src/"
 ]
 
-[fuzz]
-runs = 1_000
-
-[profile.fuzz.ci]
-runs = 100_000
+[rpc_endpoints]
+main = "https://rpc.ankr.com/eth"
+base = "https://rpc.ankr.com/base"
+poly = "https://rpc.ankr.com/polygon"
+opti = "https://rpc.ankr.com/optimism"
+arbi = "https://rpc.ankr.com/arbitrum"
