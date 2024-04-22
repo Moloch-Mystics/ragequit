@@ -30,12 +30,12 @@ contract Ragequitter {
         uint256 amount
     );
 
-    /// @dev Emitted when account metadata updates.
+    /// @dev Emitted when account `metadata` updates.
     event URI(string metadata, uint256 indexed id);
 
     /// ========================== STRUCTS ========================== ///
 
-    /// @dev The account ragequit settings.
+    /// @dev The account ragequit time window settings.
     struct Settings {
         uint48 validAfter;
         uint48 validUntil;
@@ -43,21 +43,21 @@ contract Ragequitter {
 
     /// ========================== STORAGE ========================== ///
 
-    /// @dev Public settings for account ragequit.
-    mapping(address => Settings) public settings;
-
     /// @dev Public total supply for account loot.
-    mapping(uint256 => uint256) public totalSupply;
+    mapping(uint256 id => uint256) public totalSupply;
 
     /// @dev Public metadata for account loot info.
     mapping(uint256 id => string metadata) public uri;
 
-    /// @dev Public token balances for account loot shareholders.
-    mapping(address => mapping(uint256 => uint256)) public balanceOf;
+    /// @dev Public settings for account ragequit.
+    mapping(address account => Settings) public settings;
+
+    /// @dev Public token balances for account loot users.
+    mapping(address user => mapping(uint256 id => uint256)) public balanceOf;
 
     /// ========================== RAGEQUIT ========================== ///
 
-    /// @dev Ragequit redeem `amount` of `account` loot for `assets`.
+    /// @dev Ragequit redeems `amount` of `account` loot tokens for fair share of pooled `assets`.
     function ragequit(address account, uint256 amount, address[] calldata assets) public virtual {
         Settings storage set = settings[account];
 
@@ -98,7 +98,7 @@ contract Ragequitter {
 
     /// ============================ LOOT ============================ ///
 
-    /// @dev Mint `amount` of loot token shares for `to`.
+    /// @dev Mints `amount` of loot token shares for `to`.
     function mint(address to, uint256 amount) public virtual {
         uint256 id = uint256(uint160(msg.sender));
         unchecked {
@@ -108,7 +108,7 @@ contract Ragequitter {
         emit TransferSingle(msg.sender, address(0), to, id, amount);
     }
 
-    /// @dev Burn `amount` of loot token shares for `from`.
+    /// @dev Burns `amount` of loot token shares for `from`.
     function burn(address from, uint256 amount) public virtual {
         uint256 id = uint256(uint160(msg.sender));
         balanceOf[from][id] -= amount;
@@ -118,7 +118,7 @@ contract Ragequitter {
         emit TransferSingle(msg.sender, from, address(0), id, amount);
     }
 
-    /// @dev Sets account and loot token metadata.
+    /// @dev Sets account and loot token URI `metadata`.
     function setURI(string calldata metadata) public virtual {
         uint256 id = uint256(uint160(msg.sender));
         emit URI(uri[id] = metadata, id);
@@ -176,7 +176,7 @@ contract Ragequitter {
 
     /// ======================== INSTALLATION ======================== ///
 
-    /// @dev Initializes ragequit settings for the caller account.
+    /// @dev Initializes ragequit time window settings for the caller account.
     function install(uint48 validAfter, uint48 validUntil) public virtual {
         settings[msg.sender] = Settings(validAfter, validUntil);
     }

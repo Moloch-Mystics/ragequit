@@ -1,27 +1,18 @@
 # Ragequitter
-[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/eb82d4c2e59ec76c81b700e79ef08f3dcc672866/src/Ragequitter.sol)
+[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/ac5305183fe98a5b1db2ba84f945c7afc3ec265e/src/Ragequitter.sol)
 
 Simple ragequitter singleton. Uses pseudo-ERC-1155 accounting.
 
 
 ## State Variables
-### settings
+### totalSupply
 ========================== STORAGE ========================== ///
 
-*Public settings for account ragequit.*
-
-
-```solidity
-mapping(address => Settings) public settings;
-```
-
-
-### totalSupply
 *Public total supply for account loot.*
 
 
 ```solidity
-mapping(uint256 => uint256) public totalSupply;
+mapping(uint256 id => uint256) public totalSupply;
 ```
 
 
@@ -34,12 +25,21 @@ mapping(uint256 id => string metadata) public uri;
 ```
 
 
-### balanceOf
-*Public token balances for account loot shareholders.*
+### settings
+*Public settings for account ragequit.*
 
 
 ```solidity
-mapping(address => mapping(uint256 => uint256)) public balanceOf;
+mapping(address account => Settings) public settings;
+```
+
+
+### balanceOf
+*Public token balances for account loot users.*
+
+
+```solidity
+mapping(address user => mapping(uint256 id => uint256)) public balanceOf;
 ```
 
 
@@ -48,7 +48,7 @@ mapping(address => mapping(uint256 => uint256)) public balanceOf;
 
 ========================== RAGEQUIT ========================== ///
 
-*Ragequit redeem `amount` of `account` loot for `assets`.*
+*Ragequit redeems `amount` of `account` loot tokens for fair share of pooled `assets`.*
 
 
 ```solidity
@@ -69,7 +69,7 @@ function _mulDiv(uint256 x, uint256 y, uint256 d) internal pure virtual returns 
 
 ============================ LOOT ============================ ///
 
-*Mint `amount` of loot token shares for `to`.*
+*Mints `amount` of loot token shares for `to`.*
 
 
 ```solidity
@@ -78,7 +78,7 @@ function mint(address to, uint256 amount) public virtual;
 
 ### burn
 
-*Burn `amount` of loot token shares for `from`.*
+*Burns `amount` of loot token shares for `from`.*
 
 
 ```solidity
@@ -87,7 +87,7 @@ function burn(address from, uint256 amount) public virtual;
 
 ### setURI
 
-*Sets account and loot token metadata.*
+*Sets account and loot token URI `metadata`.*
 
 
 ```solidity
@@ -125,7 +125,7 @@ function _safeTransferFrom(address token, address from, address to, uint256 amou
 
 ======================== INSTALLATION ======================== ///
 
-*Initializes ragequit settings for the caller account.*
+*Initializes ragequit time window settings for the caller account.*
 
 
 ```solidity
@@ -147,7 +147,7 @@ event TransferSingle(
 ```
 
 ### URI
-*Emitted when account metadata updates.*
+*Emitted when account `metadata` updates.*
 
 
 ```solidity
@@ -191,7 +191,7 @@ error MulDivFailed();
 ### Settings
 ========================== STRUCTS ========================== ///
 
-*The account ragequit settings.*
+*The account ragequit time window settings.*
 
 
 ```solidity
