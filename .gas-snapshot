@@ -1,4 +1,4 @@
-RagequitterTest:testDeploy() (gas: 455877)
-RagequitterTest:testInstall() (gas: 27855)
-RagequitterTest:testMint() (gas: 78485)
-RagequitterTest:testRagequit() (gas: 159956)
+RagequitterTest:testDeploy() (gas: 690214)
+RagequitterTest:testInstall() (gas: 27900)
+RagequitterTest:testMint() (gas: 78573)
+RagequitterTest:testRagequit() (gas: 160287)

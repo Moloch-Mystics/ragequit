@@ -1,5 +1,5 @@
 # Ragequitter
-[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/845182b2b2d7e42a6f2d55820158fafa420ea59e/src/Ragequitter.sol)
+[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/b87e90f392318996ba36f7b72a5f06d43c43c79c/src/Ragequitter.sol)
 
 Simple ragequitter singleton. Uses pseudo-ERC-1155 accounting.
 
@@ -25,8 +25,17 @@ mapping(uint256 => uint256) public totalSupply;
 ```
 
 
+### uri
+*Public metadata for account loot info.*
+
+
+```solidity
+mapping(uint256 id => string metadata) public uri;
+```
+
+
 ### balanceOf
-*Public loot balances for account token holders.*
+*Public token balances for account loot shareholders.*
 
 
 ```solidity
@@ -74,6 +83,15 @@ function mint(address to, uint256 amount) public virtual;
 
 ```solidity
 function burn(address from, uint256 amount) public virtual;
+```
+
+### setURI
+
+*Sets account and loot token metadata.*
+
+
+```solidity
+function setURI(string calldata metadata) public virtual;
 ```
 
 ### _balanceOf
@@ -126,6 +144,14 @@ from `from` to `to` by `operator`.*
 event TransferSingle(
     address indexed operator, address indexed from, address indexed to, uint256 id, uint256 amount
 );
+```
+
+### URI
+*Emitted when account metadata updates.*
+
+
+```solidity
+event URI(string metadata, uint256 indexed id);
 ```
 
 ## Errors

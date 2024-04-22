@@ -30,6 +30,9 @@ contract Ragequitter {
         uint256 amount
     );
 
+    /// @dev Emitted when account metadata updates.
+    event URI(string metadata, uint256 indexed id);
+
     /// ========================== STRUCTS ========================== ///
 
     /// @dev The account ragequit settings.
@@ -46,7 +49,10 @@ contract Ragequitter {
     /// @dev Public total supply for account loot.
     mapping(uint256 => uint256) public totalSupply;
 
-    /// @dev Public loot balances for account token holders.
+    /// @dev Public metadata for account loot info.
+    mapping(uint256 id => string metadata) public uri;
+
+    /// @dev Public token balances for account loot shareholders.
     mapping(uint256 => mapping(address => uint256)) public balanceOf;
 
     /// ========================== RAGEQUIT ========================== ///
@@ -110,6 +116,12 @@ contract Ragequitter {
             totalSupply[id] -= amount;
         }
         emit TransferSingle(msg.sender, from, address(0), id, amount);
+    }
+
+    /// @dev Sets account and loot token metadata.
+    function setURI(string calldata metadata) public virtual {
+        uint256 id = uint256(uint160(msg.sender));
+        emit URI(uri[id] = metadata, id);
     }
 
     /// =========================== TOKENS =========================== ///
