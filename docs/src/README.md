@@ -1,6 +1,6 @@
 # [ragequit](https://github.com/Moloch-Mystics/ragequit)  [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL-black.svg)](https://opensource.org/license/agpl-v3/) [![solidity](https://img.shields.io/badge/solidity-%5E0.8.25-black)](https://docs.soliditylang.org/en/v0.8.25/) [![Foundry](https://img.shields.io/badge/Built%20with-Foundry-000000.svg)](https://getfoundry.sh/) ![tests](https://github.com/Moloch-Mystics/ragequit/actions/workflows/ci.yml/badge.svg)
 
-*Ragequit everywhere.* Fair-share *ragequit* redemptions router for any token burn. Developed and deployed as the [Ragequitter](./src/Ragequitter.sol) solidity singleton.
+Fair-share *ragequit* redemptions for all (or atleast *most*) accounts. Developed and deployed as the [Ragequitter](./src/Ragequitter.sol) solidity singleton.
 
 ## Getting Started
 

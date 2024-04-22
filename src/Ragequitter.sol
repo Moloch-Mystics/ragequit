@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.19;
 
-/// @notice Simple ragequitter singleton. Uses pseudo-ERC-1155 accounting.
+/// @notice Simple ragequitter singleton. Uses pseudo-ERC1155 accounting.
 contract Ragequitter {
     /// ======================= CUSTOM ERRORS ======================= ///
 
@@ -20,8 +20,7 @@ contract Ragequitter {
 
     /// =========================== EVENTS =========================== ///
 
-    /// @dev Emitted when `amount` of token `id` is transferred
-    /// from `from` to `to` by `operator`.
+    /// @dev Emitted to simulate ERC1155 mints for loot.
     event TransferSingle(
         address indexed operator,
         address indexed from,
@@ -76,7 +75,7 @@ contract Ragequitter {
 
         for (uint256 i; i != assets.length; ++i) {
             asset = assets[i];
-            if (asset < prev) revert InvalidAssetOrder();
+            if (asset <= prev) revert InvalidAssetOrder();
             prev = asset;
             uint256 share = _mulDiv(amount, _balanceOf(asset, account), supply);
             if (share != 0) _safeTransferFrom(asset, account, msg.sender, share);

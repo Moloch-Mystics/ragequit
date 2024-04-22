@@ -1,7 +1,7 @@
 # Ragequitter
-[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/ac5305183fe98a5b1db2ba84f945c7afc3ec265e/src/Ragequitter.sol)
+[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/6e7d8d161cf3bac8f0d0d7c310e70d24c56f0da4/src/Ragequitter.sol)
 
-Simple ragequitter singleton. Uses pseudo-ERC-1155 accounting.
+Simple ragequitter singleton. Uses pseudo-ERC1155 accounting.
 
 
 ## State Variables
@@ -136,8 +136,7 @@ function install(uint48 validAfter, uint48 validUntil) public virtual;
 ### TransferSingle
 =========================== EVENTS =========================== ///
 
-*Emitted when `amount` of token `id` is transferred
-from `from` to `to` by `operator`.*
+*Emitted to simulate ERC1155 mints for loot.*
 
 
 ```solidity

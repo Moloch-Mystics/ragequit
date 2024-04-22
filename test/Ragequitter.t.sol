@@ -26,6 +26,11 @@ contract RagequitterTest is Test {
         ragequitter.install(0, type(uint48).max);
     }
 
+    function testSetURI() public {
+        ragequitter.setURI("ok");
+        assertEq(ragequitter.uri(uint256(uint160(address(this)))), "ok");
+    }
+
     function testMint() public {
         ragequitter.mint(address(this), 50);
         ragequitter.mint(address(1), 50);
