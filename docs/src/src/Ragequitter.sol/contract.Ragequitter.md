@@ -1,5 +1,5 @@
 # Ragequitter
-[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/b87e90f392318996ba36f7b72a5f06d43c43c79c/src/Ragequitter.sol)
+[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/eb82d4c2e59ec76c81b700e79ef08f3dcc672866/src/Ragequitter.sol)
 
 Simple ragequitter singleton. Uses pseudo-ERC-1155 accounting.
 
@@ -39,7 +39,7 @@ mapping(uint256 id => string metadata) public uri;
 
 
 ```solidity
-mapping(uint256 => mapping(address => uint256)) public balanceOf;
+mapping(address => mapping(uint256 => uint256)) public balanceOf;
 ```
 
 

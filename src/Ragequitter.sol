@@ -53,7 +53,7 @@ contract Ragequitter {
     mapping(uint256 id => string metadata) public uri;
 
     /// @dev Public token balances for account loot shareholders.
-    mapping(uint256 => mapping(address => uint256)) public balanceOf;
+    mapping(address => mapping(uint256 => uint256)) public balanceOf;
 
     /// ========================== RAGEQUIT ========================== ///
 
@@ -65,7 +65,7 @@ contract Ragequitter {
         if (block.timestamp > set.validUntil) revert InvalidTime();
 
         uint256 id = uint256(uint160(account));
-        balanceOf[id][msg.sender] -= amount;
+        balanceOf[msg.sender][id] -= amount;
         uint256 supply = totalSupply[id];
         unchecked {
             totalSupply[id] -= amount;
@@ -102,7 +102,7 @@ contract Ragequitter {
     function mint(address to, uint256 amount) public virtual {
         uint256 id = uint256(uint160(msg.sender));
         unchecked {
-            balanceOf[id][to] += amount;
+            balanceOf[to][id] += amount;
         }
         totalSupply[id] += amount;
         emit TransferSingle(msg.sender, address(0), to, id, amount);
@@ -111,7 +111,7 @@ contract Ragequitter {
     /// @dev Burn `amount` of loot token shares for `from`.
     function burn(address from, uint256 amount) public virtual {
         uint256 id = uint256(uint160(msg.sender));
-        balanceOf[id][from] -= amount;
+        balanceOf[from][id] -= amount;
         unchecked {
             totalSupply[id] -= amount;
         }
