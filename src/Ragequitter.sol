@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.19;
 
-/// @notice Simple ragequitter singleton. Uses pseudo-ERC1155 accounting.
-contract Ragequitter {
+import {ERC6909} from "@solady/src/tokens/ERC6909.sol";
+
+/// @notice Simple ragequitter singleton. Uses ERC6909 minimal multitoken.
+contract Ragequitter is ERC6909 {
     /// ======================= CUSTOM ERRORS ======================= ///
 
     /// @dev The ERC20 `transferFrom` has failed.
@@ -20,21 +22,33 @@ contract Ragequitter {
 
     /// =========================== EVENTS =========================== ///
 
-    /// @dev Emitted to simulate ERC1155 mints for loot.
-    event TransferSingle(
-        address indexed operator,
-        address indexed from,
-        address indexed to,
-        uint256 id,
-        uint256 amount
-    );
-
-    /// @dev Emitted when account `metadata` updates.
+    /// @dev Logs new loot metadata setting.
     event URI(string metadata, uint256 indexed id);
+
+    /// @dev Logs new authority contract for an account.
+    event AuthSet(address indexed account, IAuth auth);
+
+    /// @dev Logs new account ragequit time validity setting.
+    event TimeValiditySet(address indexed account, uint48 validAfter, uint48 validUntil);
 
     /// ========================== STRUCTS ========================== ///
 
-    /// @dev The account ragequit time window settings.
+    /// @dev The account loot metadata struct.
+    struct Metadata {
+        string name;
+        string symbol;
+        string tokenURI;
+        IAuth authority;
+        uint96 totalSupply;
+    }
+
+    /// @dev The account loot shares struct.
+    struct Ownership {
+        address owner;
+        uint96 shares;
+    }
+
+    /// @dev The account ragequit settings struct.
     struct Settings {
         uint48 validAfter;
         uint48 validUntil;
@@ -42,33 +56,50 @@ contract Ragequitter {
 
     /// ========================== STORAGE ========================== ///
 
-    /// @dev Public total supply for account loot.
-    mapping(uint256 id => uint256) public totalSupply;
+    /// @dev Stores mapping of metadata settings to account token IDs.
+    /// note: IDs are unique to addresses (`uint256(uint160(account))`).
+    mapping(uint256 id => Metadata) internal _metadata;
 
-    /// @dev Public metadata for account loot info.
-    mapping(uint256 id => string metadata) public uri;
+    /// @dev Stores mapping of ragequit settings to accounts.
+    mapping(address account => Settings) internal _settings;
 
-    /// @dev Public settings for account ragequit.
-    mapping(address account => Settings) public settings;
+    /// ================= ERC6909 METADATA & SUPPLY ================= ///
 
-    /// @dev Public token balances for account loot users.
-    mapping(address user => mapping(uint256 id => uint256)) public balanceOf;
+    /// @dev Returns the name for token `id` using this contract.
+    function name(uint256 id) public view virtual override(ERC6909) returns (string memory) {
+        return _metadata[id].name;
+    }
+
+    /// @dev Returns the symbol for token `id` using this contract.
+    function symbol(uint256 id) public view virtual override(ERC6909) returns (string memory) {
+        return _metadata[id].symbol;
+    }
+
+    /// @dev Returns the URI for token `id` using this contract.
+    function tokenURI(uint256 id) public view virtual override(ERC6909) returns (string memory) {
+        return _metadata[id].tokenURI;
+    }
+
+    /// @dev Returns the total supply for token `id` using this contract.
+    function totalSupply(uint256 id) public view virtual returns (uint256) {
+        return _metadata[id].totalSupply;
+    }
 
     /// ========================== RAGEQUIT ========================== ///
 
-    /// @dev Ragequit redeems `amount` of `account` loot tokens for fair share of pooled `assets`.
-    function ragequit(address account, uint256 amount, address[] calldata assets) public virtual {
-        Settings storage set = settings[account];
+    /// @dev Ragequits `shares` of `account` loot for their current fair share of pooled `assets`.
+    function ragequit(address account, uint96 shares, address[] calldata assets) public virtual {
+        Settings storage setting = _settings[account];
 
-        if (block.timestamp < set.validAfter) revert InvalidTime();
-        if (block.timestamp > set.validUntil) revert InvalidTime();
+        if (block.timestamp < setting.validAfter) revert InvalidTime();
+        if (block.timestamp > setting.validUntil) revert InvalidTime();
 
         uint256 id = uint256(uint160(account));
-        balanceOf[msg.sender][id] -= amount;
-        uint256 supply = totalSupply[id];
+        uint256 supply = _metadata[id].totalSupply;
         unchecked {
-            totalSupply[id] -= amount;
+            _metadata[id].totalSupply -= shares;
         }
+        _burn(msg.sender, id, shares);
 
         address asset;
         address prev;
@@ -77,7 +108,7 @@ contract Ragequitter {
             asset = assets[i];
             if (asset <= prev) revert InvalidAssetOrder();
             prev = asset;
-            uint256 share = _mulDiv(amount, _balanceOf(asset, account), supply);
+            uint256 share = _mulDiv(shares, _balanceOf(asset, account), supply);
             if (share != 0) _safeTransferFrom(asset, account, msg.sender, share);
         }
     }
@@ -95,35 +126,87 @@ contract Ragequitter {
         }
     }
 
-    /// ============================ LOOT ============================ ///
+    /// ======================== INSTALLATION ======================== ///
 
-    /// @dev Mints `amount` of loot token shares for `to`.
-    function mint(address to, uint256 amount) public virtual {
+    /// @dev Initializes ragequit settings for the caller account.
+    function install(Ownership[] calldata owners, Settings calldata setting, Metadata calldata meta)
+        public
+        virtual
+    {
         uint256 id = uint256(uint160(msg.sender));
-        unchecked {
-            balanceOf[to][id] += amount;
+        _settings[msg.sender] = Settings(setting.validAfter, setting.validUntil);
+        if (owners.length != 0) {
+            uint96 supply;
+            for (uint256 i; i != owners.length;) {
+                supply += owners[i].shares;
+                _mint(owners[i].owner, id, owners[i].shares);
+                unchecked {
+                    ++i;
+                }
+            }
+            _metadata[id].totalSupply += supply;
         }
-        totalSupply[id] += amount;
-        emit TransferSingle(msg.sender, address(0), to, id, amount);
+        if (bytes(meta.name).length != 0) {
+            _metadata[id].name = meta.name;
+            _metadata[id].symbol = meta.symbol;
+        }
+        if (bytes(meta.tokenURI).length != 0) _metadata[id].tokenURI = meta.tokenURI;
+        if (meta.authority != IAuth(address(0))) _metadata[id].authority = meta.authority;
     }
 
-    /// @dev Burns `amount` of loot token shares for `from`.
-    function burn(address from, uint256 amount) public virtual {
-        uint256 id = uint256(uint160(msg.sender));
-        balanceOf[from][id] -= amount;
-        unchecked {
-            totalSupply[id] -= amount;
-        }
-        emit TransferSingle(msg.sender, from, address(0), id, amount);
+    /// @dev Sets new authority contract for the caller account.
+    function setAuth(IAuth auth) public virtual {
+        emit AuthSet(msg.sender, (_metadata[uint256(uint160(msg.sender))].authority = auth));
     }
 
     /// @dev Sets account and loot token URI `metadata`.
     function setURI(string calldata metadata) public virtual {
         uint256 id = uint256(uint160(msg.sender));
-        emit URI(uri[id] = metadata, id);
+        emit URI(_metadata[id].tokenURI = metadata, id);
     }
 
-    /// =========================== TOKENS =========================== ///
+    /// @dev Sets account ragequit time validity (or 'timespan').
+    function setTimeValidity(uint48 validAfter, uint48 validUntil) public virtual {
+        _settings[msg.sender] = Settings(validAfter, validUntil);
+        emit TimeValiditySet(msg.sender, validAfter, validUntil);
+    }
+
+    /// ============================ LOOT ============================ ///
+
+    /// @dev Returns the account metadata.
+    function getMetadata(address account)
+        public
+        view
+        virtual
+        returns (string memory, string memory, string memory, IAuth)
+    {
+        Metadata storage meta = _metadata[uint256(uint160(account))];
+        return (meta.name, meta.symbol, meta.tokenURI, meta.authority);
+    }
+
+    /// @dev Returns the account ragequit time validity settings.
+    function getSettings(address account) public view virtual returns (uint48, uint48) {
+        Settings storage setting = _settings[account];
+        return (setting.validAfter, setting.validUntil);
+    }
+
+    /// @dev Mints loot shares for an owner of the caller account.
+    function mint(address owner, uint96 shares) public payable virtual {
+        uint256 id = uint256(uint160(msg.sender));
+        _metadata[id].totalSupply += shares;
+        _mint(owner, id, shares);
+    }
+
+    /// @dev Burns loot shares from an owner of the caller account.
+    function burn(address owner, uint96 shares) public payable virtual {
+        uint256 id = uint256(uint160(msg.sender));
+        unchecked {
+            _metadata[id].totalSupply -= shares;
+        }
+        _burn(owner, id, shares);
+    }
+
+    /// =================== EXTERNAL TOKEN HELPERS =================== ///
 
     /// @dev Returns the `amount` of ERC20 `token` owned by `account`.
     /// Returns zero if the `token` does not exist.
@@ -173,10 +256,24 @@ contract Ragequitter {
         }
     }
 
-    /// ======================== INSTALLATION ======================== ///
+    /// ========================= OVERRIDES ========================= ///
 
-    /// @dev Initializes ragequit time window settings for the caller account.
-    function install(uint48 validAfter, uint48 validUntil) public virtual {
-        settings[msg.sender] = Settings(validAfter, validUntil);
+    /// @dev Hook that is called before any transfer of tokens.
+    /// This includes minting and burning. Also requests authority for token transfers.
+    function _beforeTokenTransfer(address from, address to, uint256 id, uint256 amount)
+        internal
+        virtual
+        override(ERC6909)
+    {
+        IAuth auth = _metadata[id].authority;
+        if (auth != IAuth(address(0))) auth.validateTransfer(from, to, id, amount);
     }
+}
+
+/// @notice Simple authority interface for contracts.
+interface IAuth {
+    function validateTransfer(address, address, uint256, uint256)
+        external
+        payable
+        returns (uint256);
 }

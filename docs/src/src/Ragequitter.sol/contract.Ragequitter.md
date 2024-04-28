@@ -1,58 +1,82 @@
 # Ragequitter
-[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/6e7d8d161cf3bac8f0d0d7c310e70d24c56f0da4/src/Ragequitter.sol)
+[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/86d6dd99cf3f73cadf56ed6fdfbc85c29c7189ff/src/Ragequitter.sol)
 
-Simple ragequitter singleton. Uses pseudo-ERC1155 accounting.
+**Inherits:**
+ERC6909
+
+Simple ragequitter singleton. Uses ERC6909 minimal multitoken.
 
 
 ## State Variables
-### totalSupply
+### _metadata
 ========================== STORAGE ========================== ///
 
-*Public total supply for account loot.*
+*Stores mapping of metadata settings to account token IDs.
+note: IDs are unique to addresses (`uint256(uint160(account))`).*
 
 
 ```solidity
-mapping(uint256 id => uint256) public totalSupply;
+mapping(uint256 id => Metadata) internal _metadata;
 ```
 
 
-### uri
-*Public metadata for account loot info.*
+### _settings
+*Stores mapping of ragequit settings to accounts.*
 
 
 ```solidity
-mapping(uint256 id => string metadata) public uri;
-```
-
-
-### settings
-*Public settings for account ragequit.*
-
-
-```solidity
-mapping(address account => Settings) public settings;
-```
-
-
-### balanceOf
-*Public token balances for account loot users.*
-
-
-```solidity
-mapping(address user => mapping(uint256 id => uint256)) public balanceOf;
+mapping(address account => Settings) internal _settings;
 ```
 
 
 ## Functions
+### name
+
+================= ERC6909 METADATA & SUPPLY ================= ///
+
+*Returns the name for token `id` using this contract.*
+
+
+```solidity
+function name(uint256 id) public view virtual override(ERC6909) returns (string memory);
+```
+
+### symbol
+
+*Returns the symbol for token `id` using this contract.*
+
+
+```solidity
+function symbol(uint256 id) public view virtual override(ERC6909) returns (string memory);
+```
+
+### tokenURI
+
+*Returns the URI for token `id` using this contract.*
+
+
+```solidity
+function tokenURI(uint256 id) public view virtual override(ERC6909) returns (string memory);
+```
+
+### totalSupply
+
+*Returns the total supply for token `id` using this contract.*
+
+
+```solidity
+function totalSupply(uint256 id) public view virtual returns (uint256);
+```
+
 ### ragequit
 
 ========================== RAGEQUIT ========================== ///
 
-*Ragequit redeems `amount` of `account` loot tokens for fair share of pooled `assets`.*
+*Ragequits `shares` of `account` loot for their current fair share of pooled `assets`.*
 
 
 ```solidity
-function ragequit(address account, uint256 amount, address[] calldata assets) public virtual;
+function ragequit(address account, uint96 shares, address[] calldata assets) public virtual;
 ```
 
 ### _mulDiv
@@ -65,24 +89,26 @@ Reverts if `x * y` overflows, or `d` is zero.*
 function _mulDiv(uint256 x, uint256 y, uint256 d) internal pure virtual returns (uint256 z);
 ```
 
-### mint
+### install
 
-============================ LOOT ============================ ///
+======================== INSTALLATION ======================== ///
 
-*Mints `amount` of loot token shares for `to`.*
+*Initializes ragequit settings for the caller account.*
 
 
 ```solidity
-function mint(address to, uint256 amount) public virtual;
+function install(Ownership[] calldata owners, Settings calldata setting, Metadata calldata meta)
+    public
+    virtual;
 ```
 
-### burn
+### setAuth
 
-*Burns `amount` of loot token shares for `from`.*
+*Sets new authority contract for the caller account.*
 
 
 ```solidity
-function burn(address from, uint256 amount) public virtual;
+function setAuth(IAuth auth) public virtual;
 ```
 
 ### setURI
@@ -94,9 +120,60 @@ function burn(address from, uint256 amount) public virtual;
 function setURI(string calldata metadata) public virtual;
 ```
 
+### setTimeValidity
+
+*Sets account ragequit time validity (or 'timespan').*
+
+
+```solidity
+function setTimeValidity(uint48 validAfter, uint48 validUntil) public virtual;
+```
+
+### getMetadata
+
+============================ LOOT ============================ ///
+
+*Returns the account metadata.*
+
+
+```solidity
+function getMetadata(address account)
+    public
+    view
+    virtual
+    returns (string memory, string memory, string memory, IAuth);
+```
+
+### getSettings
+
+*Returns the account ragequit time validity settings.*
+
+
+```solidity
+function getSettings(address account) public view virtual returns (uint48, uint48);
+```
+
+### mint
+
+*Mints loot shares for an owner of the caller account.*
+
+
+```solidity
+function mint(address owner, uint96 shares) public payable virtual;
+```
+
+### burn
+
+*Burns loot shares from an owner of the caller account.*
+
+
+```solidity
+function burn(address owner, uint96 shares) public payable virtual;
+```
+
 ### _balanceOf
 
-=========================== TOKENS =========================== ///
+=================== EXTERNAL TOKEN HELPERS =================== ///
 
 *Returns the `amount` of ERC20 `token` owned by `account`.
 Returns zero if the `token` does not exist.*
@@ -121,36 +198,46 @@ function _safeTransferFrom(address token, address from, address to, uint256 amou
     virtual;
 ```
 
-### install
+### _beforeTokenTransfer
 
-======================== INSTALLATION ======================== ///
+========================= OVERRIDES ========================= ///
 
-*Initializes ragequit time window settings for the caller account.*
+*Hook that is called before any transfer of tokens.
+This includes minting and burning. Also requests authority for token transfers.*
 
 
 ```solidity
-function install(uint48 validAfter, uint48 validUntil) public virtual;
+function _beforeTokenTransfer(address from, address to, uint256 id, uint256 amount)
+    internal
+    virtual
+    override(ERC6909);
 ```
 
 ## Events
-### TransferSingle
+### URI
 =========================== EVENTS =========================== ///
 
-*Emitted to simulate ERC1155 mints for loot.*
-
-
-```solidity
-event TransferSingle(
-    address indexed operator, address indexed from, address indexed to, uint256 id, uint256 amount
-);
-```
-
-### URI
-*Emitted when account `metadata` updates.*
+*Logs new loot metadata setting.*
 
 
 ```solidity
 event URI(string metadata, uint256 indexed id);
+```
+
+### AuthSet
+*Logs new authority contract for an account.*
+
+
+```solidity
+event AuthSet(address indexed account, IAuth auth);
+```
+
+### TimeValiditySet
+*Logs new account ragequit time validity setting.*
+
+
+```solidity
+event TimeValiditySet(address indexed account, uint48 validAfter, uint48 validUntil);
 ```
 
 ## Errors
@@ -187,10 +274,35 @@ error MulDivFailed();
 ```
 
 ## Structs
-### Settings
+### Metadata
 ========================== STRUCTS ========================== ///
 
-*The account ragequit time window settings.*
+*The account loot metadata struct.*
+
+
+```solidity
+struct Metadata {
+    string name;
+    string symbol;
+    string tokenURI;
+    IAuth authority;
+    uint96 totalSupply;
+}
+```
+
+### Ownership
+*The account loot shares struct.*
+
+
+```solidity
+struct Ownership {
+    address owner;
+    uint96 shares;
+}
+```
+
+### Settings
+*The account ragequit settings struct.*
 
 
 ```solidity

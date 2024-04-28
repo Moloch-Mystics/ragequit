@@ -12,6 +12,24 @@ contract RagequitterTest is Test {
     Ragequitter internal ragequitter;
     MockERC20 internal asset0;
 
+    struct Metadata {
+        string name;
+        string symbol;
+        string tokenURI;
+        IAuth authority;
+        uint96 totalSupply;
+    }
+
+    struct Ownership {
+        address owner;
+        uint96 shares;
+    }
+
+    struct Settings {
+        uint48 validAfter;
+        uint48 validUntil;
+    }
+
     function setUp() public {
         ragequitter = new Ragequitter();
         asset0 = new MockERC20("Test", "Test", 18);
@@ -23,12 +41,16 @@ contract RagequitterTest is Test {
     }
 
     function testInstall() public {
-        ragequitter.install(0, type(uint48).max);
+        Ragequitter.Ownership[] memory owners;
+        Ragequitter.Settings memory setting;
+        setting.validUntil = type(uint48).max;
+        Ragequitter.Metadata memory metadata;
+        ragequitter.install(owners, setting, metadata);
     }
 
     function testSetURI() public {
         ragequitter.setURI("ok");
-        assertEq(ragequitter.uri(uint256(uint160(address(this)))), "ok");
+        assertEq(ragequitter.tokenURI(uint256(uint160(address(this)))), "ok");
     }
 
     function testMint() public {
@@ -53,4 +75,12 @@ contract RagequitterTest is Test {
         assertEq(asset0.balanceOf(address(this)), 50);
         assertEq(asset0.balanceOf(address(1)), 50);
     }
+}
+
+/// @notice Simple authority interface for contracts.
+interface IAuth {
+    function validateTransfer(address, address, uint256, uint256)
+        external
+        payable
+        returns (uint256);
 }
