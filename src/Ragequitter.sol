@@ -105,6 +105,7 @@ contract Ragequitter is ERC6909 {
 
         if (block.timestamp < setting.validAfter) revert InvalidTime();
         if (block.timestamp > setting.validUntil) revert InvalidTime();
+        if (assets.length == 0) revert InvalidAssetOrder();
 
         uint256 id = uint256(uint160(account));
         uint256 supply = _metadata[id].totalSupply;
@@ -115,12 +116,13 @@ contract Ragequitter is ERC6909 {
 
         address asset;
         address prev;
+        uint256 share;
 
         for (uint256 i; i != assets.length; ++i) {
             asset = assets[i];
             if (asset <= prev) revert InvalidAssetOrder();
             prev = asset;
-            uint256 share = _mulDiv(shares, _balanceOf(asset, account), supply);
+            share = _mulDiv(shares, _balanceOf(asset, account), supply);
             if (share != 0) _safeTransferFrom(asset, account, msg.sender, share);
         }
     }
@@ -141,14 +143,14 @@ contract Ragequitter is ERC6909 {
     /// ============================ LOOT ============================ ///
 
     /// @dev Mints loot shares for an owner of the caller account.
-    function mint(address owner, uint96 shares) public payable virtual {
+    function mint(address owner, uint96 shares) public virtual {
         uint256 id = uint256(uint160(msg.sender));
         _metadata[id].totalSupply += shares;
         _mint(owner, id, shares);
     }
 
     /// @dev Burns loot shares from an owner of the caller account.
-    function burn(address owner, uint96 shares) public payable virtual {
+    function burn(address owner, uint96 shares) public virtual {
         uint256 id = uint256(uint160(msg.sender));
         unchecked {
             _metadata[id].totalSupply -= shares;
@@ -218,8 +220,8 @@ contract Ragequitter is ERC6909 {
     }
 
     /// @dev Sets new authority contract for the caller account.
-    function setAuth(IAuth auth) public virtual {
-        emit AuthSet(msg.sender, (_metadata[uint256(uint160(msg.sender))].authority = auth));
+    function setAuth(IAuth authority) public virtual {
+        emit AuthSet(msg.sender, (_metadata[uint256(uint160(msg.sender))].authority = authority));
     }
 
     /// @dev Sets account and loot token URI `metadata`.
@@ -228,10 +230,12 @@ contract Ragequitter is ERC6909 {
         emit URI((_metadata[id].tokenURI = metadata), id);
     }
 
-    /// @dev Sets account ragequit time validity (or 'timespan').
+    /// @dev Sets account ragequit time validity (or 'time window').
     function setTimeValidity(uint48 validAfter, uint48 validUntil) public virtual {
         emit TimeValiditySet(
-            msg.sender, _settings[msg.sender].validAfter, _settings[msg.sender].validUntil
+            msg.sender,
+            _settings[msg.sender].validAfter = validAfter,
+            _settings[msg.sender].validUntil = validUntil
         );
     }
 
@@ -309,8 +313,8 @@ contract Ragequitter is ERC6909 {
         virtual
         override(ERC6909)
     {
-        IAuth auth = _metadata[id].authority;
-        if (auth != IAuth(address(0))) auth.validateTransfer(from, to, id, amount);
+        IAuth authority = _metadata[id].authority;
+        if (authority != IAuth(address(0))) authority.validateTransfer(from, to, id, amount);
     }
 }
 

@@ -1,13 +1,24 @@
 # Ragequitter
-[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/86d6dd99cf3f73cadf56ed6fdfbc85c29c7189ff/src/Ragequitter.sol)
+[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/ed98f5886956972c8e4422a029cd6053d14f537c/src/Ragequitter.sol)
 
 **Inherits:**
 ERC6909
 
-Simple ragequitter singleton. Uses ERC6909 minimal multitoken.
+Simple ragequit singleton with ERC6909 accounting. Version 1.
 
 
 ## State Variables
+### ETH
+========================= CONSTANTS ========================= ///
+
+*The conventional ERC7528 ETH address.*
+
+
+```solidity
+address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+```
+
+
 ### _metadata
 ========================== STORAGE ========================== ///
 
@@ -89,6 +100,38 @@ Reverts if `x * y` overflows, or `d` is zero.*
 function _mulDiv(uint256 x, uint256 y, uint256 d) internal pure virtual returns (uint256 z);
 ```
 
+### mint
+
+============================ LOOT ============================ ///
+
+*Mints loot shares for an owner of the caller account.*
+
+
+```solidity
+function mint(address owner, uint96 shares) public virtual;
+```
+
+### burn
+
+*Burns loot shares from an owner of the caller account.*
+
+
+```solidity
+function burn(address owner, uint96 shares) public virtual;
+```
+
+### contribute
+
+========================== TRIBUTE ========================== ///
+
+*Mints loot shares in exchange for tribute `amount` to an `account`.
+If no `tribute` is set, then function will revert on `safeTransferFrom`.*
+
+
+```solidity
+function contribute(address account, uint256 amount) public payable virtual;
+```
+
 ### install
 
 ======================== INSTALLATION ======================== ///
@@ -102,36 +145,9 @@ function install(Ownership[] calldata owners, Settings calldata setting, Metadat
     virtual;
 ```
 
-### setAuth
-
-*Sets new authority contract for the caller account.*
-
-
-```solidity
-function setAuth(IAuth auth) public virtual;
-```
-
-### setURI
-
-*Sets account and loot token URI `metadata`.*
-
-
-```solidity
-function setURI(string calldata metadata) public virtual;
-```
-
-### setTimeValidity
-
-*Sets account ragequit time validity (or 'timespan').*
-
-
-```solidity
-function setTimeValidity(uint48 validAfter, uint48 validUntil) public virtual;
-```
-
 ### getMetadata
 
-============================ LOOT ============================ ///
+==================== SETTINGS & METADATA ==================== ///
 
 *Returns the account metadata.*
 
@@ -146,34 +162,52 @@ function getMetadata(address account)
 
 ### getSettings
 
-*Returns the account ragequit time validity settings.*
+*Returns the account tribute and ragequit time validity settings.*
 
 
 ```solidity
-function getSettings(address account) public view virtual returns (uint48, uint48);
+function getSettings(address account) public view virtual returns (address, uint48, uint48);
 ```
 
-### mint
+### setAuth
 
-*Mints loot shares for an owner of the caller account.*
+*Sets new authority contract for the caller account.*
 
 
 ```solidity
-function mint(address owner, uint96 shares) public payable virtual;
+function setAuth(IAuth authority) public virtual;
 ```
 
-### burn
+### setURI
 
-*Burns loot shares from an owner of the caller account.*
+*Sets account and loot token URI `metadata`.*
 
 
 ```solidity
-function burn(address owner, uint96 shares) public payable virtual;
+function setURI(string calldata metadata) public virtual;
+```
+
+### setTimeValidity
+
+*Sets account ragequit time validity (or 'time window').*
+
+
+```solidity
+function setTimeValidity(uint48 validAfter, uint48 validUntil) public virtual;
+```
+
+### setTribute
+
+*Sets account contribution asset (tribute).*
+
+
+```solidity
+function setTribute(address tribute) public virtual;
 ```
 
 ### _balanceOf
 
-=================== EXTERNAL TOKEN HELPERS =================== ///
+=================== EXTERNAL ASSET HELPERS =================== ///
 
 *Returns the `amount` of ERC20 `token` owned by `account`.
 Returns zero if the `token` does not exist.*
@@ -185,6 +219,15 @@ function _balanceOf(address token, address account)
     view
     virtual
     returns (uint256 amount);
+```
+
+### _safeTransferETH
+
+*Sends `amount` (in wei) ETH to `to`.*
+
+
+```solidity
+function _safeTransferETH(address to, uint256 amount) internal virtual;
 ```
 
 ### _safeTransferFrom
@@ -217,7 +260,7 @@ function _beforeTokenTransfer(address from, address to, uint256 id, uint256 amou
 ### URI
 =========================== EVENTS =========================== ///
 
-*Logs new loot metadata setting.*
+*Logs new account loot metadata.*
 
 
 ```solidity
@@ -225,11 +268,19 @@ event URI(string metadata, uint256 indexed id);
 ```
 
 ### AuthSet
-*Logs new authority contract for an account.*
+*Logs new account authority contract.*
 
 
 ```solidity
-event AuthSet(address indexed account, IAuth auth);
+event AuthSet(address indexed account, IAuth authority);
+```
+
+### TributeSet
+*Logs new account contribution asset setting.*
+
+
+```solidity
+event TributeSet(address indexed account, address tribute);
 ```
 
 ### TimeValiditySet
@@ -241,17 +292,9 @@ event TimeValiditySet(address indexed account, uint48 validAfter, uint48 validUn
 ```
 
 ## Errors
-### TransferFromFailed
+### InvalidTime
 ======================= CUSTOM ERRORS ======================= ///
 
-*The ERC20 `transferFrom` has failed.*
-
-
-```solidity
-error TransferFromFailed();
-```
-
-### InvalidTime
 *Invalid time window for ragequit.*
 
 
@@ -260,6 +303,8 @@ error InvalidTime();
 ```
 
 ### InvalidAssetOrder
+*Out-of-order redemption assets.*
+
 
 ```solidity
 error InvalidAssetOrder();
@@ -273,11 +318,27 @@ error InvalidAssetOrder();
 error MulDivFailed();
 ```
 
+### TransferFromFailed
+*ERC20 `transferFrom` failed.*
+
+
+```solidity
+error TransferFromFailed();
+```
+
+### ETHTransferFailed
+*ETH transfer failed.*
+
+
+```solidity
+error ETHTransferFailed();
+```
+
 ## Structs
 ### Metadata
 ========================== STRUCTS ========================== ///
 
-*The account loot metadata struct.*
+*The account loot shares metadata struct.*
 
 
 ```solidity
@@ -291,7 +352,7 @@ struct Metadata {
 ```
 
 ### Ownership
-*The account loot shares struct.*
+*The account loot shares ownership struct.*
 
 
 ```solidity
@@ -302,11 +363,12 @@ struct Ownership {
 ```
 
 ### Settings
-*The account ragequit settings struct.*
+*The account loot shares settings struct.*
 
 
 ```solidity
 struct Settings {
+    address tribute;
     uint48 validAfter;
     uint48 validUntil;
 }

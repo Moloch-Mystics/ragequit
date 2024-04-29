@@ -1,5 +1,5 @@
 # IAuth
-[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/86d6dd99cf3f73cadf56ed6fdfbc85c29c7189ff/src/Ragequitter.sol)
+[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/ed98f5886956972c8e4422a029cd6053d14f537c/src/Ragequitter.sol)
 
 Simple authority interface for contracts.
 
