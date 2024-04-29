@@ -4,36 +4,42 @@ pragma solidity ^0.8.19;
 
 import {ERC6909} from "@solady/src/tokens/ERC6909.sol";
 
-/// @notice Simple ragequitter singleton. Uses ERC6909 minimal multitoken.
+/// @notice Simple ragequit singleton with ERC6909 accounting. Version 1.
 contract Ragequitter is ERC6909 {
     /// ======================= CUSTOM ERRORS ======================= ///
-
-    /// @dev The ERC20 `transferFrom` has failed.
-    error TransferFromFailed();
 
     /// @dev Invalid time window for ragequit.
     error InvalidTime();
 
-    // @dev Out-of-order redemption assets.
+    /// @dev Out-of-order redemption assets.
     error InvalidAssetOrder();
 
     /// @dev Overflow or division by zero.
     error MulDivFailed();
 
+    /// @dev ERC20 `transferFrom` failed.
+    error TransferFromFailed();
+
+    /// @dev ETH transfer failed.
+    error ETHTransferFailed();
+
     /// =========================== EVENTS =========================== ///
 
-    /// @dev Logs new loot metadata setting.
+    /// @dev Logs new account loot metadata.
     event URI(string metadata, uint256 indexed id);
 
-    /// @dev Logs new authority contract for an account.
-    event AuthSet(address indexed account, IAuth auth);
+    /// @dev Logs new account authority contract.
+    event AuthSet(address indexed account, IAuth authority);
+
+    /// @dev Logs new account contribution asset setting.
+    event TributeSet(address indexed account, address tribute);
 
     /// @dev Logs new account ragequit time validity setting.
     event TimeValiditySet(address indexed account, uint48 validAfter, uint48 validUntil);
 
     /// ========================== STRUCTS ========================== ///
 
-    /// @dev The account loot metadata struct.
+    /// @dev The account loot shares metadata struct.
     struct Metadata {
         string name;
         string symbol;
@@ -42,17 +48,23 @@ contract Ragequitter is ERC6909 {
         uint96 totalSupply;
     }
 
-    /// @dev The account loot shares struct.
+    /// @dev The account loot shares ownership struct.
     struct Ownership {
         address owner;
         uint96 shares;
     }
 
-    /// @dev The account ragequit settings struct.
+    /// @dev The account loot shares settings struct.
     struct Settings {
+        address tribute;
         uint48 validAfter;
         uint48 validUntil;
     }
+
+    /// ========================= CONSTANTS ========================= ///
+
+    /// @dev The conventional ERC7528 ETH address.
+    address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     /// ========================== STORAGE ========================== ///
 
@@ -126,69 +138,7 @@ contract Ragequitter is ERC6909 {
         }
     }
 
-    /// ======================== INSTALLATION ======================== ///
-
-    /// @dev Initializes ragequit settings for the caller account.
-    function install(Ownership[] calldata owners, Settings calldata setting, Metadata calldata meta)
-        public
-        virtual
-    {
-        uint256 id = uint256(uint160(msg.sender));
-        _settings[msg.sender] = Settings(setting.validAfter, setting.validUntil);
-        if (owners.length != 0) {
-            uint96 supply;
-            for (uint256 i; i != owners.length;) {
-                supply += owners[i].shares;
-                _mint(owners[i].owner, id, owners[i].shares);
-                unchecked {
-                    ++i;
-                }
-            }
-            _metadata[id].totalSupply += supply;
-        }
-        if (bytes(meta.name).length != 0) {
-            _metadata[id].name = meta.name;
-            _metadata[id].symbol = meta.symbol;
-        }
-        if (bytes(meta.tokenURI).length != 0) _metadata[id].tokenURI = meta.tokenURI;
-        if (meta.authority != IAuth(address(0))) _metadata[id].authority = meta.authority;
-    }
-
-    /// @dev Sets new authority contract for the caller account.
-    function setAuth(IAuth auth) public virtual {
-        emit AuthSet(msg.sender, (_metadata[uint256(uint160(msg.sender))].authority = auth));
-    }
-
-    /// @dev Sets account and loot token URI `metadata`.
-    function setURI(string calldata metadata) public virtual {
-        uint256 id = uint256(uint160(msg.sender));
-        emit URI(_metadata[id].tokenURI = metadata, id);
-    }
-
-    /// @dev Sets account ragequit time validity (or 'timespan').
-    function setTimeValidity(uint48 validAfter, uint48 validUntil) public virtual {
-        _settings[msg.sender] = Settings(validAfter, validUntil);
-        emit TimeValiditySet(msg.sender, validAfter, validUntil);
-    }
-
     /// ============================ LOOT ============================ ///
-
-    /// @dev Returns the account metadata.
-    function getMetadata(address account)
-        public
-        view
-        virtual
-        returns (string memory, string memory, string memory, IAuth)
-    {
-        Metadata storage meta = _metadata[uint256(uint160(account))];
-        return (meta.name, meta.symbol, meta.tokenURI, meta.authority);
-    }
-
-    /// @dev Returns the account ragequit time validity settings.
-    function getSettings(address account) public view virtual returns (uint48, uint48) {
-        Settings storage setting = _settings[account];
-        return (setting.validAfter, setting.validUntil);
-    }
 
     /// @dev Mints loot shares for an owner of the caller account.
     function mint(address owner, uint96 shares) public payable virtual {
@@ -206,7 +156,91 @@ contract Ragequitter is ERC6909 {
         _burn(owner, id, shares);
     }
 
-    /// =================== EXTERNAL TOKEN HELPERS =================== ///
+    /// ========================== TRIBUTE ========================== ///
+
+    /// @dev Mints loot shares in exchange for tribute `amount` to an `account`.
+    /// If no `tribute` is set, then function will revert on `safeTransferFrom`.
+    function contribute(address account, uint256 amount) public payable virtual {
+        address tribute = _settings[account].tribute;
+        if (tribute == ETH) _safeTransferETH(account, amount);
+        else _safeTransferFrom(tribute, msg.sender, account, amount);
+        _mint(msg.sender, uint256(uint160(account)), amount);
+    }
+
+    /// ======================== INSTALLATION ======================== ///
+
+    /// @dev Initializes ragequit settings for the caller account.
+    function install(Ownership[] calldata owners, Settings calldata setting, Metadata calldata meta)
+        public
+        virtual
+    {
+        uint256 id = uint256(uint160(msg.sender));
+        if (owners.length != 0) {
+            uint96 supply;
+            for (uint256 i; i != owners.length; ++i) {
+                supply += owners[i].shares;
+                _mint(owners[i].owner, id, owners[i].shares);
+            }
+            _metadata[id].totalSupply += supply;
+        }
+        if (bytes(meta.name).length != 0) {
+            _metadata[id].name = meta.name;
+            _metadata[id].symbol = meta.symbol;
+        }
+        if (bytes(meta.tokenURI).length != 0) {
+            emit URI((_metadata[id].tokenURI = meta.tokenURI), id);
+        }
+        if (meta.authority != IAuth(address(0))) {
+            emit AuthSet(msg.sender, (_metadata[id].authority = meta.authority));
+        }
+        _settings[msg.sender] = Settings(setting.tribute, setting.validAfter, setting.validUntil);
+        emit TimeValiditySet(msg.sender, setting.validAfter, setting.validUntil);
+        emit TributeSet(msg.sender, setting.tribute);
+    }
+
+    /// ==================== SETTINGS & METADATA ==================== ///
+
+    /// @dev Returns the account metadata.
+    function getMetadata(address account)
+        public
+        view
+        virtual
+        returns (string memory, string memory, string memory, IAuth)
+    {
+        Metadata storage meta = _metadata[uint256(uint160(account))];
+        return (meta.name, meta.symbol, meta.tokenURI, meta.authority);
+    }
+
+    /// @dev Returns the account tribute and ragequit time validity settings.
+    function getSettings(address account) public view virtual returns (address, uint48, uint48) {
+        Settings storage setting = _settings[account];
+        return (setting.tribute, setting.validAfter, setting.validUntil);
+    }
+
+    /// @dev Sets new authority contract for the caller account.
+    function setAuth(IAuth auth) public virtual {
+        emit AuthSet(msg.sender, (_metadata[uint256(uint160(msg.sender))].authority = auth));
+    }
+
+    /// @dev Sets account and loot token URI `metadata`.
+    function setURI(string calldata metadata) public virtual {
+        uint256 id = uint256(uint160(msg.sender));
+        emit URI((_metadata[id].tokenURI = metadata), id);
+    }
+
+    /// @dev Sets account ragequit time validity (or 'timespan').
+    function setTimeValidity(uint48 validAfter, uint48 validUntil) public virtual {
+        emit TimeValiditySet(
+            msg.sender, _settings[msg.sender].validAfter, _settings[msg.sender].validUntil
+        );
+    }
+
+    /// @dev Sets account contribution asset (tribute).
+    function setTribute(address tribute) public virtual {
+        emit TributeSet(msg.sender, _settings[msg.sender].tribute = tribute);
+    }
+
+    /// =================== EXTERNAL ASSET HELPERS =================== ///
 
     /// @dev Returns the `amount` of ERC20 `token` owned by `account`.
     /// Returns zero if the `token` does not exist.
@@ -227,6 +261,16 @@ contract Ragequitter is ERC6909 {
                         staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20)
                     )
                 )
+        }
+    }
+
+    /// @dev Sends `amount` (in wei) ETH to `to`.
+    function _safeTransferETH(address to, uint256 amount) internal virtual {
+        assembly ("memory-safe") {
+            if iszero(call(gas(), to, amount, codesize(), 0x00, codesize(), 0x00)) {
+                mstore(0x00, 0xb12d13eb) // `ETHTransferFailed()`.
+                revert(0x1c, 0x04)
+            }
         }
     }
 
