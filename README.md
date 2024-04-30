@@ -2,6 +2,8 @@
 
 *Ragequit* redemption for all accounts. Developed and deployed as the [Ragequitter](./src/Ragequitter.sol) solidity singleton.
 
+V1 Deployment: [0x0000000000008743D388E5279B2A9EF87A3115Ae](https://arbiscan.io/address/0x0000000000008743d388e5279b2a9ef87a3115ae#code)
+
 ## How it works
 
 Let's say you have a Gnosis Safe or smart account or DAO treasury. And you want to make it so people can take tokens out of your account without a proposal by burning other tokens ("redemption", and those other tokens, "loot"). The classic use case of this is the ["Moloch DAO ragequit"](https://github.com/MolochVentures/moloch/blob/master/contracts/Moloch.sol#L528), which is a game theory mechanism that serves trustless crowdfunding ("tribute") by guaranteeing contributors that they can always get their share of tribute back if they burn loot. 

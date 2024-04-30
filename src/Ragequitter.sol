@@ -162,11 +162,13 @@ contract Ragequitter is ERC6909 {
 
     /// @dev Mints loot shares in exchange for tribute `amount` to an `account`.
     /// If no `tribute` is set, then function will revert on `safeTransferFrom`.
-    function contribute(address account, uint256 amount) public payable virtual {
+    function contribute(address account, uint96 amount) public payable virtual {
         address tribute = _settings[account].tribute;
         if (tribute == ETH) _safeTransferETH(account, amount);
         else _safeTransferFrom(tribute, msg.sender, account, amount);
-        _mint(msg.sender, uint256(uint160(account)), amount);
+        uint256 id = uint256(uint160(account));
+        _metadata[id].totalSupply += amount;
+        _mint(msg.sender, id, amount);
     }
 
     /// ======================== INSTALLATION ======================== ///

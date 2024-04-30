@@ -1,5 +1,5 @@
 # Ragequitter
-[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/ed98f5886956972c8e4422a029cd6053d14f537c/src/Ragequitter.sol)
+[Git Source](https://github.com/Moloch-Mystics/ragequit/blob/8d443b27797d45370cd001aa46ede3a2766571c4/src/Ragequitter.sol)
 
 **Inherits:**
 ERC6909
@@ -129,7 +129,7 @@ If no `tribute` is set, then function will revert on `safeTransferFrom`.*
 
 
 ```solidity
-function contribute(address account, uint256 amount) public payable virtual;
+function contribute(address account, uint96 amount) public payable virtual;
 ```
 
 ### install
